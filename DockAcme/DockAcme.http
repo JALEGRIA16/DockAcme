@@ -1,0 +1,6 @@
+@DockAcme_HostAddress = http://localhost:5095
+
+GET {{DockAcme_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

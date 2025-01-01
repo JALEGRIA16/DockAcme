@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Acme Json y Soap</title>
+    <style>
+        /* Estilos para la visualización de XML */
+        pre {
+            white-space: pre-wrap; /* Mantener el espacio en blanco y las nuevas líneas */
+            word-wrap: break-word; /* Romper las palabras largas */
+            background-color: #f4f4f4; /* Fondo gris claro */
+            padding: 10px; /* Añadir relleno */
+            border-radius: 5px; /* Bordes redondeados */
+            border: 1px solid #ccc; /* Borde gris */
+            font-family: 'Courier New', Courier, monospace; /* Fuente tipo monoespaciada */
+            font-size: 14px; /* Tamaño de fuente */
+        }
+    </style>
+</head>
+<body>
+    <h1>Resultados JSON y Soap</h1>
+    <div id="divtodo" class="container">
+    <div id="divcontainer" class="container">
+        <div class="resultado">
+            <h3>Resultado JSON Pedidos</h3>
+            <pre id="jsonResultado">Loading Pediso...</pre>
+        </div>
+        <div class="resultado">
+            <h3>Resultado SOAP Pedidos</h3>
+            <pre id="SoapResultado">Loading Pedidos...</pre>
+        </div>
+    </div>
+    <div id="divcontainerEnvios" class="containerEnvios">
+        <div class="resultado">
+            <h3>Resultado JSON Envios</h3>
+            <pre id="jsonResultadoEnvios">Loading Envios...</pre>
+        </div>
+        <div class="resultado">
+            <h3>Resultado SOAP Envios</h3>
+            <pre id="SoapResultadoEnvios">Loading Envios...</pre>
+        </div>
+    </div>
+    </div>
+
+    <script>
+
+
+        // Función para formatear el XML y hacerlo legible
+        function formatXML(xml) {
+            let formatted = '';
+            let reg = /(>)(<)(\/*)/g;
+            xml = xml.replace(reg, '$1\n$2$3');
+            let pad = 0;
+            let xmlLines = xml.split('\n');
+            xmlLines.forEach(function (node) {
+                let indent = 0;
+                if (node.match(/.+<\/\w[^>]*>$/)) {
+                    indent = 0;
+                } else if (node.match(/^<\/\w/)) {
+                    if (pad) {
+                        pad -= 1;
+                    }
+                } else if (node.match(/^<\w[^>]*[^\/]>.*$/)) {
+                    indent = 1;
+                } else {
+                    indent = 0;
+                }
+
+                let padding = '';
+                for (let i = 0; i < pad; i++) {
+                    padding += '  ';
+                }
+                formatted += padding + node.replace(/<\/?d2p1:/g, "<") + '\n';
+                pad += indent;
+            });
+
+            return formatted;
+        }
+        //Carga json Envios
+        async function CargarJSONEnvios() {
+            try {
+                const response = await fetch('/api/Envio');
+                const data = await response.json();
+                document.getElementById('jsonResultadoEnvios').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('jsonResultadoEnvios').textContent = 'Error en JSON:' + error;
+            }
+        };
+
+        //Carga json pedidos
+        async function CargarJSON() {
+            try {
+                const response = await fetch('/api/Pedido');
+                const data = await response.json();
+                document.getElementById('jsonResultado').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('jsonResultado').textContent = 'Error en JSON:' + error;
+            }
+        };
+        //Carga SOAP PEdidos
+        async function CargarSOAP() {
+
+            // Cuerpo de la solicitud SOAP
+            const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+                                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+                                               xmlns:web="http://WSDLs/EnvioPedidos/EnvioPedidosAcme">
+                                    <soap:Header/>
+                                    <soap:Body>
+                                        <web:GetPedidos/>
+                                    </soap:Body>
+                                </soap:Envelope>`;
+
+            // Hacer la solicitud con fetch
+            fetch('http://localhost:5095/PedidoService.svc/GetPedidos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/xml',
+                    'SOAPAction': 'http://tempuri.org/IPedidoService/GetPedidos'
+                },
+                body: soapEnvelope
+            })
+                .then(response => response.text())  // Leer la respuesta como texto (XML)
+                .then(responseText => {
+                    const formattedResponse = formatXML(responseText);
+                    // Mostrar la respuesta SOAP en el div
+                    document.getElementById('SoapResultado').innerText = formattedResponse;
+                })
+                .catch(error => {
+                    console.error('Error al consumir el servicio SOAP:', error);
+                    document.getElementById('SoapResultado').innerText = 'Error al cargar el servicio SOAP.';
+                });
+
+        };
+
+
+        //Carga SOAP Envios
+        async function CargarSOAPEnvios() {
+
+            // Cuerpo de la solicitud SOAP
+            const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+                        <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+                                       xmlns:web="http://WSDLs/EnvioPedidos/EnvioPedidosAcme">
+                            <soap:Header/>
+                            <soap:Body>
+                                <web:GetEnvios/>
+                            </soap:Body>
+                        </soap:Envelope>`;
+
+            // Hacer la solicitud con fetch
+            fetch('http://localhost:5095/EnvioService.svc/GetEnvios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/xml',
+                    'SOAPAction': 'http://tempuri.org/IEnvioService/GetEnvios'
+                },
+                body: soapEnvelope
+            })
+                .then(response => response.text())  // Leer la respuesta como texto (XML)
+                .then(responseText => {
+                    const formattedResponse = formatXML(responseText);
+                    // Mostrar la respuesta SOAP en el div
+                    document.getElementById('SoapResultadoEnvios').innerText = formattedResponse;
+                })
+                .catch(error => {
+                    console.error('Error al consumir el servicio SOAP de Envios:', error);
+                    document.getElementById('SoapResultadoEnvios').innerText = 'Error al cargar el servicio SOAP Envios.';
+                });
+
+        };
+
+        CargarJSON();
+        CargarJSONEnvios();
+        CargarSOAP();
+        CargarSOAPEnvios();
+
+    </script>
+</body>
+</html>
